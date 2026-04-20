@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMAE · Backtracking Dinámico Real · Planificador Nutricional</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Roboto', system-ui, sans-serif;
+        }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #0b0f14;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+        #main-container {
+            position: relative;
+            width: 1100px;
+            background: #1a1e26;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            overflow: hidden;
+            border: 1px solid #2e3a48;
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-bottom: 1px solid #2a3542;
+        }
+        .controls-panel {
+            display: flex;
+            padding: 16px 24px;
+            gap: 30px;
+            background: #11161c;
+            align-items: center;
+            flex-wrap: wrap;
+            border-top: 1px solid #27323e;
+        }
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: #cfddee;
+        }
+        .slider-group label {
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: 0.3px;
+            color: #a0b8d0;
+        }
+        .slider-group input {
+            width: 200px;
+            accent-color: #3b9eff;
+        }
+        .slider-group span {
+            min-width: 65px;
+            background: #1e2630;
+            padding: 4px 10px;
+            border-radius: 24px;
+            text-align: center;
+            font-weight: 600;
+            color: #bdd3f0;
+            border: 1px solid #314a5e;
+        }
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-left: auto;
+        }
+        .btn {
+            background: #25303d;
+            border: none;
+            color: #e3ecf5;
+            padding: 10px 22px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border: 1px solid #3f5568;
+            transition: all 0.15s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            letter-spacing: 0.3px;
+        }
+        .btn:hover {
+            background: #2f3f50;
+            border-color: #5f8ab6;
+            color: white;
+            transform: translateY(-1px);
+        }
+        .btn.primary {
+            background: #1e6f9f;
+            border-color: #5faee3;
+            color: white;
+        }
+        .btn.primary:hover {
+            background: #2a85b9;
+        }
+        .status-text {
+            color: #b4cef0;
+            font-size: 0.9rem;
+            margin-left: 20px;
+            border-left: 1px solid #30455a;
+            padding-left: 20px;
+        }
+        .status-text strong {
+            color: #f2e982;
+        }
+        footer {
+            font-size: 0.75rem;
+            text-align: right;
+            padding: 6px 24px;
+            color: #5b738b;
+            background: #0e141a;
+        }
+        /* Scrollbars */
+        #catalogo-box::-webkit-scrollbar, #soluciones-box::-webkit-scrollbar {
+            width: 6px;
+        }
+        #catalogo-box::-webkit-scrollbar-track, #soluciones-box::-webkit-scrollbar-track {
+            background: #1a2a3a;
+            border-radius: 10px;
+        }
+        #catalogo-box::-webkit-scrollbar-thumb, #soluciones-box::-webkit-scrollbar-thumb {
+            background: #3b9eff;
+            border-radius: 10px;
+        }
+        #catalogo-scroll-container, #soluciones-scroll-container {
+            z-index: 10;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+</head>
+<body>
+<div id="main-container">
+    <div id="p5canvas"></div>
+
+    <!-- Catálogo con scroll -->
+    <div id="catalogo-scroll-container" style="position: absolute; left: 20px; top: 60px; width: 300px; height: 530px; pointer-events: none;">
+        <div id="catalogo-box" style="position: absolute; top: 45px; left: 10px; right: 10px; bottom: 10px; overflow-y: auto; background: transparent; color: #e0edf5; font-family: 'Segoe UI', sans-serif; font-size: 12px; pointer-events: auto; scrollbar-width: thin; padding-right: 4px;">
+            <div id="catalogo-lista" style="line-height: 1.8;"></div>
+        </div>
+    </div>
+
+    <!-- Soluciones con scroll -->
+    <div id="soluciones-scroll-container" style="position: absolute; left: 340px; top: 60px; width: 400px; height: 530px; pointer-events: none; z-index: 20;">
+        <div id="soluciones-box" style="position: absolute; bottom: 10px; left: 10px; right: 10px; max-height: 150px; overflow-y: auto; background: rgba(15, 25, 35, 0.95); border: 1px solid #3a5f7a; border-radius: 12px; padding: 10px 12px; color: #cde5ff; font-family: 'Segoe UI', monospace; font-size: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); backdrop-filter: blur(4px); pointer-events: auto;">
+            <div style="font-weight: bold; color: #b0e57c; margin-bottom: 6px;">✅ Soluciones encontradas</div>
+            <div id="soluciones-lista" style="line-height: 1.5;">(Ninguna aún)</div>
+        </div>
+    </div>
+
+    <div id="ui-controls" class="controls-panel"></div>
+    <footer>⚡ Backtracking Dinámico Real · SMAE · Glucosa & Ejercicio reactivos</footer>
+</div>
+
+<script>
+// ==========================================================================
+//  SIMULADOR BACKTRACKING REAL (con pila de estados)
+// ==========================================================================
+
+const catalogoBase = [
+  { nombre: '🥚 Huevos a la Mex',      calorias: 250, cat: 'Desayuno', restricciones: [] },
+  { nombre: '🥑 Aguacate',             calorias: 160, cat: 'Desayuno', restricciones: [] },
+  { nombre: '🍳 Huevo Estrellado',     calorias: 140, cat: 'Desayuno', restricciones: [] },
+  { nombre: '🥞 Hot Cakes',            calorias: 350, cat: 'Desayuno', restricciones: ['harina'] },
+  { nombre: '🥣 Avena con Agua',       calorias: 150, cat: 'Desayuno', restricciones: ['avena'] },
+  { nombre: '🍊 Jugo de Naranja',      calorias: 110, cat: 'Desayuno', restricciones: ['altoIG'] },
+  { nombre: '🍎 Manzana',              calorias: 95,  cat: 'Desayuno', restricciones: [] },
+  { nombre: '🍌 Plátano',              calorias: 105, cat: 'Desayuno', restricciones: ['altoIG'] },
+  { nombre: '🥩 Alambre de Res',       calorias: 400, cat: 'Comida',   restricciones: [] },
+  { nombre: '🍗 Pechuga de Pollo',     calorias: 220, cat: 'Comida',   restricciones: [] },
+  { nombre: '🐟 Filete de Pescado',    calorias: 200, cat: 'Comida',   restricciones: [] },
+  { nombre: '🥗 Ensalada Mixta',       calorias: 80,  cat: 'Comida',   restricciones: [] },
+  { nombre: '🍲 Sopa de Verduras',     calorias: 120, cat: 'Comida',   restricciones: [] },
+  { nombre: '🌮 Tacos Dorados',        calorias: 300, cat: 'Comida',   restricciones: ['harina'] },
+  { nombre: '🌮 Tortilla de Maíz',     calorias: 50,  cat: 'Ambos',    restricciones: [] },
+  { nombre: '🫓 Tortilla de Harina',   calorias: 80,  cat: 'Ambos',    restricciones: ['harina'] },
+  { nombre: '🧀 Queso Panela',         calorias: 100, cat: 'Ambos',    restricciones: ['lacteo'] },
+  { nombre: '🫘 Frijoles de la Olla',  calorias: 120, cat: 'Ambos',    restricciones: [] },
+  { nombre: '🥔 Papa Cocida',          calorias: 130, cat: 'Ambos',    restricciones: [] },
+  { nombre: '🍚 Arroz Blanco',         calorias: 140, cat: 'Ambos',    restricciones: [] },
+  { nombre: '🥑 Guacamole',            calorias: 150, cat: 'Ambos',    restricciones: [] },
+  { nombre: '🌶️ Chile Toreado',       calorias: 20,  cat: 'Ambos',    restricciones: [] },
+  { nombre: '🧃 Agua de Jamaica',      calorias: 70,  cat: 'Ambos',    restricciones: ['altoIG'] },
+  { nombre: '🥛 Leche Entera',         calorias: 150, cat: 'Ambos',    restricciones: ['lacteo'] },
+  { nombre: '🍞 Pan Dulce',            calorias: 200, cat: 'Ambos',    restricciones: ['harina', 'altoIG'] }
+];
+
+const OBLIGATORIOS = ['🥚 Huevos a la Mex', '🥩 Alambre de Res'];
+
+let glucosa = 105;
+let minutosEjercicio = 30;
+
+function calcularLimiteCalorico() {
+  return 850 + (minutosEjercicio * 5);
+}
+
+function obtenerRestriccionesActivas() {
+  const base = new Set(['harina', 'lacteo', 'avena']);
+  if (glucosa >= 100) base.add('altoIG');
+  return base;
+}
+
+function esAlimentoValido(alimento) {
+  const activas = obtenerRestriccionesActivas();
+  for (let r of alimento.restricciones) {
+    if (activas.has(r)) return false;
+  }
+  return true;
+}
+
+// ========== ESTADO DEL SOLVER CON BACKTRACKING REAL ==========
+let solverState = {
+  catalogoFiltrado: [],
+  // Pila de estados: cada elemento es { indice, menu, calorias }
+  pila: [],
+  // Estado actual (el que se muestra en la interfaz)
+  menuTemporal: [],
+  caloriasActuales: 0,
+  indiceActual: 0,
+  
+  solucionesEncontradas: [],
+  
+  buscando: false,
+  terminado: false,
+  mensajeEstado: '● Listo. Configure parámetros y presione "Iniciar Búsqueda".',
+  alimentoEnEvaluacion: null,
+  motivoFallo: '',
+  intervalo: null
+};
+
+let divEstado, sliderGlucosa, sliderEjercicio, spanGlucosa, spanEjercicio, spanLimite;
+
+function prepararCatalogoFiltrado() {
+  return catalogoBase.filter(esAlimentoValido);
+}
+
+function resetSolver() {
+  if (solverState.intervalo) {
+    clearInterval(solverState.intervalo);
+    solverState.intervalo = null;
+  }
+  solverState.catalogoFiltrado = prepararCatalogoFiltrado();
+  actualizarCatalogoHTML();
+  
+  // Inicializar pila con el estado raíz (índice 0, menú vacío)
+  solverState.pila = [{ indice: 0, menu: [], calorias: 0 }];
+  solverState.indiceActual = 0;
+  solverState.menuTemporal = [];
+  solverState.caloriasActuales = 0;
+  solverState.solucionesEncontradas = [];
+  actualizarDivSoluciones();
+  solverState.buscando = false;
+  solverState.terminado = false;
+  solverState.alimentoEnEvaluacion = null;
+  solverState.motivoFallo = '';
+  actualizarMensajeEstado('🔄 Estado reiniciado. Backtracking real listo.');
+}
+
+function esMenuObjetivo(menu, calorias) {
+  const nombres = menu.map(a => a.nombre);
+  const tieneObligatorios = OBLIGATORIOS.every(ob => nombres.includes(ob));
+  const limite = calcularLimiteCalorico();
+  return tieneObligatorios && calorias >= 700 && calorias <= limite;
+}
+
+function registrarSolucion(menu) {
+  const copia = menu.map(a => ({ ...a }));
+  const clave = copia.map(a => a.nombre).sort().join('|');
+  if (!solverState.solucionesEncontradas.some(s => s.map(a=>a.nombre).sort().join('|') === clave)) {
+    solverState.solucionesEncontradas.push(copia);
+  }
+  actualizarDivSoluciones();
+}
+
+// ========== UN PASO DE BACKTRACKING REAL ==========
+function pasoBacktracking() {
+  if (solverState.terminado) return true;
+  
+  const limiteCal = calcularLimiteCalorico();
+  const filtrado = solverState.catalogoFiltrado;
+  
+  // Si la pila está vacía, terminamos
+  if (solverState.pila.length === 0) {
+    solverState.terminado = true;
+    solverState.buscando = false;
+    actualizarMensajeEstado(`🏁 Búsqueda finalizada. ${solverState.solucionesEncontradas.length} solución(es).`);
+    return true;
+  }
+  
+  // Tomar el estado actual del tope de la pila
+  const estadoActual = solverState.pila[solverState.pila.length - 1];
+  const idx = estadoActual.indice;
+  const menu = estadoActual.menu;
+  const cal = estadoActual.calorias;
+  
+  // Actualizar visualización
+  solverState.indiceActual = idx;
+  solverState.menuTemporal = [...menu];
+  solverState.caloriasActuales = cal;
+  
+  // Si ya procesamos todos los alimentos, verificar si el menú es objetivo y luego hacer pop
+  if (idx >= filtrado.length) {
+    if (esMenuObjetivo(menu, cal)) {
+      registrarSolucion(menu);
+      actualizarMensajeEstado(`✅ ¡Solución encontrada! (${cal} kcal)`);
+    }
+    // Retroceder (pop)
+    solverState.pila.pop();
+    solverState.alimentoEnEvaluacion = null;
+    return false;
+  }
+  
+  const alimento = filtrado[idx];
+  solverState.alimentoEnEvaluacion = alimento;
+  
+  // Quitar el estado actual de la pila (vamos a reemplazarlo por las dos ramas)
+  solverState.pila.pop();
+  
+  // --- Rama 1: NO incluir el alimento ---
+  // Simplemente avanzamos el índice
+  solverState.pila.push({
+    indice: idx + 1,
+    menu: [...menu],
+    calorias: cal
+  });
+  
+  // --- Rama 2: INCLUIR el alimento (si es válido y no excede calorías) ---
+  const nuevaCal = cal + alimento.calorias;
+  const excede = nuevaCal > limiteCal;
+  const esValido = esAlimentoValido(alimento);
+  
+  if (esValido && !excede) {
+    const nuevoMenu = [...menu, alimento];
+    // Insertamos esta rama en la pila (se procesará después de la rama "no incluir" debido al orden LIFO)
+    solverState.pila.push({
+      indice: idx + 1,
+      menu: nuevoMenu,
+      calorias: nuevaCal
+    });
+    actualizarMensajeEstado(`🔍 Probando incluir: ${alimento.nombre} | Cal: ${nuevaCal} / ${limiteCal}`);
+    solverState.motivoFallo = '';
+  } else {
+    // No se puede incluir, registramos motivo
+    if (!esValido) {
+      solverState.motivoFallo = `🚫 Restricción: ${alimento.restricciones.join(', ')}`;
+    } else {
+      solverState.motivoFallo = `🔥 Excede límite calórico (${nuevaCal} > ${limiteCal})`;
+    }
+    actualizarMensajeEstado(`❌ No se puede incluir ${alimento.nombre}: ${solverState.motivoFallo}`);
+  }
+  
+  // Actualizar catálogo HTML para resaltar alimento evaluado
+  actualizarCatalogoHTML();
+  
+  return false;
+}
+
+function iniciarBusquedaAuto() {
+  if (solverState.buscando) return;
+  if (solverState.terminado) resetSolver();
+  
+  resetSolver(); // Reinicia pila correctamente
+  solverState.buscando = true;
+  solverState.terminado = false;
+  actualizarMensajeEstado('⚙️ Iniciando backtracking real...');
+  
+  if (solverState.intervalo) clearInterval(solverState.intervalo);
+  solverState.intervalo = setInterval(() => {
+    if (solverState.terminado || !solverState.buscando) {
+      clearInterval(solverState.intervalo);
+      solverState.intervalo = null;
+      solverState.buscando = false;
+      return;
+    }
+    pasoBacktracking();
+    if (solverState.terminado) {
+      clearInterval(solverState.intervalo);
+      solverState.intervalo = null;
+      solverState.buscando = false;
+    }
+  }, 600);
+}
+
+function detenerBusqueda() {
+  if (solverState.intervalo) {
+    clearInterval(solverState.intervalo);
+    solverState.intervalo = null;
+  }
+  solverState.buscando = false;
+  actualizarMensajeEstado('⏸️ Búsqueda pausada.');
+}
+
+function actualizarMensajeEstado(msg) {
+  solverState.mensajeEstado = msg;
+  if (divEstado) divEstado.html(`<strong>Estado:</strong> ${msg}`);
+}
+
+// ========== ACTUALIZACIÓN HTML ==========
+function actualizarDivSoluciones() {
+  const listaDiv = document.getElementById('soluciones-lista');
+  if (!listaDiv) return;
+  const sols = solverState.solucionesEncontradas;
+  if (sols.length === 0) {
+    listaDiv.innerHTML = '(Ninguna aún)';
+    return;
+  }
+  let html = '';
+  sols.forEach((sol, idx) => {
+    const nombres = sol.map(a => a.nombre).join(', ');
+    const cals = sol.reduce((acc, a) => acc + a.calorias, 0);
+    html += `<div style="margin-bottom: 4px; border-bottom: 1px solid #2e4b5e; padding-bottom: 3px;">`;
+    html += `<span style="color: #8ec8ff;">${idx+1}.</span> ${nombres} <span style="color: #f2cd7a;">(${cals} kcal)</span>`;
+    html += `</div>`;
+  });
+  listaDiv.innerHTML = html;
+}
+
+function actualizarCatalogoHTML() {
+  const listaDiv = document.getElementById('catalogo-lista');
+  if (!listaDiv) return;
+  const filtrado = solverState.catalogoFiltrado;
+  if (filtrado.length === 0) {
+    listaDiv.innerHTML = '<div style="color: #9bb7d4; padding: 8px;">(No hay alimentos válidos)</div>';
+    return;
+  }
+  let html = '';
+  filtrado.forEach(alim => {
+    const esEvaluado = (solverState.alimentoEnEvaluacion && solverState.alimentoEnEvaluacion.nombre === alim.nombre);
+    const estilo = esEvaluado ? 
+      'background: #2a4a6a; border-left: 4px solid #6ab0fe;' : 
+      'background: #1e2a36; border-left: 4px solid #3a5a7a;';
+    html += `<div style="margin-bottom: 6px; padding: 6px 10px; border-radius: 8px; ${estilo} display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; color: #e3ecf5;">`;
+    html += `<span style="font-weight: 500;">${alim.nombre}</span>`;
+    html += `<span style="background: #0f1a24; padding: 2px 10px; border-radius: 20px; font-size: 11px; color: #b8d4f0;">${alim.calorias} kcal</span>`;
+    if (alim.restricciones.length > 0) {
+      html += `<div style="font-size: 10px; color: #f0a58b; margin-top: 3px; width: 100%;">⚠️ ${alim.restricciones.join(', ')}</div>`;
+    }
+    html += `</div>`;
+  });
+  listaDiv.innerHTML = html;
+}
+
+// ========== P5.JS ==========
+function setup() {
+  const canvas = createCanvas(1100, 650);
+  canvas.parent('p5canvas');
+  
+  const controlsDiv = select('#ui-controls');
+  
+  const divGlu = createDiv().addClass('slider-group').parent(controlsDiv);
+  createSpan('🩸 Glucosa (mg/dL)').parent(divGlu);
+  sliderGlucosa = createSlider(50, 200, glucosa, 1);
+  sliderGlucosa.parent(divGlu).style('width', '180px');
+  spanGlucosa = createSpan(glucosa.toString()).parent(divGlu);
+  
+  const divEje = createDiv().addClass('slider-group').parent(controlsDiv);
+  createSpan('🏃 Ejercicio (min)').parent(divEje);
+  sliderEjercicio = createSlider(0, 120, minutosEjercicio, 5);
+  sliderEjercicio.parent(divEje).style('width', '180px');
+  spanEjercicio = createSpan(minutosEjercicio.toString()).parent(divEje);
+  
+  spanLimite = createSpan('').addClass('slider-group').style('margin-left', '10px').parent(controlsDiv);
+  
+  const btnGroup = createDiv().addClass('button-group').parent(controlsDiv);
+  
+  createButton('▶ Iniciar Búsqueda').addClass('btn primary').parent(btnGroup).mousePressed(() => {
+    detenerBusqueda();
+    glucosa = sliderGlucosa.value();
+    minutosEjercicio = sliderEjercicio.value();
+    actualizarLabels();
+    iniciarBusquedaAuto();
+  });
+  
+  createButton('⏸️ Pausar').addClass('btn').parent(btnGroup).mousePressed(() => detenerBusqueda());
+  
+  createButton('⏯️ Paso').addClass('btn').parent(btnGroup).mousePressed(() => {
+    detenerBusqueda();
+    if (solverState.terminado) resetSolver();
+    glucosa = sliderGlucosa.value();
+    minutosEjercicio = sliderEjercicio.value();
+    actualizarLabels();
+    pasoBacktracking();
+    actualizarDivSoluciones();
+  });
+  
+  createButton('🔄 Reset').addClass('btn').parent(btnGroup).mousePressed(() => {
+    detenerBusqueda();
+    glucosa = sliderGlucosa.value();
+    minutosEjercicio = sliderEjercicio.value();
+    actualizarLabels();
+    resetSolver();
+  });
+  
+  createButton('↩️ Deshacer').addClass('btn').parent(btnGroup).mousePressed(() => {
+    detenerBusqueda();
+    // Implementar deshacer manual en pila es complejo, lo omitimos por simplicidad
+    actualizarMensajeEstado('Deshacer manual no soportado en este modo.');
+  });
+  
+  divEstado = createDiv().addClass('status-text').parent(controlsDiv);
+  actualizarMensajeEstado(solverState.mensajeEstado);
+  actualizarLabels();
+  resetSolver();
+  actualizarCatalogoHTML();
+  actualizarDivSoluciones();
+}
+
+function actualizarLabels() {
+  spanGlucosa.html(glucosa);
+  spanEjercicio.html(minutosEjercicio);
+  const limite = calcularLimiteCalorico();
+  spanLimite.html(`🎯 Límite calórico: <strong style="color:#f2cd7a">${limite} kcal</strong>`);
+}
+
+function draw() {
+  background(18, 25, 33);
+  
+  if (!solverState.buscando) {
+    glucosa = sliderGlucosa.value();
+    minutosEjercicio = sliderEjercicio.value();
+    actualizarLabels();
+    if (!solverState.terminado) {
+      solverState.catalogoFiltrado = prepararCatalogoFiltrado();
+      actualizarCatalogoHTML();
+    }
+  }
+  
+  drawPanelCatalogo(20, 60, 300, 530);
+  drawPanelMenu(340, 60, 400, 530);
+  drawPanelParametros(760, 60, 320, 530);
+  
+  push();
+  fill(220, 240, 255);
+  textSize(22);
+  textStyle(BOLD);
+  textAlign(CENTER, TOP);
+  text('🧬 Backtracking Dinámico Real · SMAE', width / 2, 20);
+  textSize(13);
+  fill(140, 180, 220);
+  text('Visualización interactiva del espacio de búsqueda con poda', width / 2, 41);
+  pop();
+}
+
+function drawPanelCatalogo(x, y, w, h) {
+  push();
+  fill(25, 35, 45, 220);
+  stroke(60, 100, 140);
+  strokeWeight(1.5);
+  rect(x, y, w, h, 12);
+  fill(210, 230, 255);
+  textSize(16);
+  textStyle(BOLD);
+  textAlign(LEFT, TOP);
+  text('📋 Catálogo SMAE', x+15, y+15);
+  textSize(12);
+  fill(130, 170, 200);
+  text('(Alimentos válidos según restricciones)', x+15, y+38);
+  pop();
+}
+
+function drawPanelMenu(x, y, w, h) {
+  push();
+  fill(25, 35, 45, 220);
+  stroke(80, 130, 170);
+  strokeWeight(1.5);
+  rect(x, y, w, h, 12);
+  
+  fill(210, 230, 255);
+  textSize(16);
+  textStyle(BOLD);
+  textAlign(LEFT, TOP);
+  text('🍽️ Menú en construcción', x+15, y+15);
+  
+  const menu = solverState.menuTemporal;
+  const calActual = solverState.caloriasActuales;
+  const limite = calcularLimiteCalorico();
+  
+  textSize(14);
+  fill(180, 220, 250);
+  text(`Calorías: ${calActual} / ${limite} kcal`, x+15, y+42);
+  
+  const barW = w-30;
+  const barX = x+15;
+  const barY = y+55;
+  fill(30, 40, 60);
+  noStroke();
+  rect(barX, barY, barW, 12, 20);
+  let porcentaje = min(1, calActual / limite);
+  fill(80, 180, 120);
+  if (calActual > limite) fill(220, 80, 80);
+  rect(barX, barY, barW * porcentaje, 12, 20);
+  
+  let posY = y + 85;
+  for (let i=0; i<menu.length; i++) {
+    const item = menu[i];
+    fill(35, 50, 65);
+    stroke(70, 110, 140);
+    rect(x+15, posY, w-30, 28, 6);
+    fill(230, 245, 255);
+    textSize(13);
+    textAlign(LEFT, CENTER);
+    text(item.nombre, x+25, posY+14);
+    textAlign(RIGHT, CENTER);
+    text(item.calorias+' kcal', x+w-25, posY+14);
+    posY += 34;
+  }
+  pop();
+}
+
+function drawPanelParametros(x, y, w, h) {
+  push();
+  fill(25, 35, 45, 220);
+  stroke(100, 130, 170);
+  strokeWeight(1.5);
+  rect(x, y, w, h, 12);
+  
+  fill(210, 230, 255);
+  textSize(16);
+  textStyle(BOLD);
+  textAlign(LEFT, TOP);
+  text('⚙️ Restricciones activas', x+15, y+15);
+  
+  textSize(13);
+  fill(170, 200, 230);
+  let posY = y+50;
+  
+  text(`🚫 Estáticas: lácteos, harinas, avena`, x+15, posY); posY+=25;
+  text(`🩸 Biométricas: Glucosa ≥100 → prohíbe altoIG`, x+15, posY); posY+=30;
+  text(`📊 Glucosa actual: ${glucosa} mg/dL`, x+15, posY); posY+=22;
+  text(`🏋️ Ejercicio: ${minutosEjercicio} min`, x+15, posY); posY+=22;
+  text(`🎯 Límite calórico: ${calcularLimiteCalorico()} kcal`, x+15, posY); posY+=35;
+  
+  fill(220, 240, 180);
+  textStyle(BOLD);
+  text('📌 Estado del algoritmo', x+15, posY); posY+=25;
+  textStyle(NORMAL);
+  fill(190, 210, 240);
+  text(solverState.mensajeEstado, x+15, posY, w-30); posY+=50;
+  
+  if (solverState.motivoFallo) {
+    fill(250, 160, 140);
+    textSize(13);
+    text(`⚠️ ${solverState.motivoFallo}`, x+15, posY, w-30);
+    posY+=30;
+  }
+  
+  if (solverState.alimentoEnEvaluacion) {
+    fill(140, 200, 250);
+    textSize(13);
+    text(`🔎 Evaluando: ${solverState.alimentoEnEvaluacion.nombre}`, x+15, posY);
+  }
+  pop();
+}
+
+function mouseReleased() {
+  if (!solverState.buscando) {
+    glucosa = sliderGlucosa.value();
+    minutosEjercicio = sliderEjercicio.value();
+    actualizarLabels();
+    solverState.catalogoFiltrado = prepararCatalogoFiltrado();
+    actualizarCatalogoHTML();
+  }
+  return false;
+}
+</script>
+</body>
+</html>
